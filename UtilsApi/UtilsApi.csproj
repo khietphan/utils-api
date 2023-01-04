@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    <PackageReference Include="BouncyCastle" Version="1.8.9" />
   </ItemGroup>
 </Project>

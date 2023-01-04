@@ -2,6 +2,9 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using UtilsApi.Models;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Security;
 
 namespace UtilsApi.Controllers;
 
@@ -100,6 +103,27 @@ public class EncryptionController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Decrypt Exception on {request.CombinedString}");
+            return "";
+        }
+    }
+
+    [HttpPost(Name = "md5")]
+    public ActionResult<string> CalculateMD5([FromBody] MD5Request request)
+    {
+        try
+        {
+            MD5 md5 = MD5.Create();
+            byte[] hash = md5.ComputeHash(Encoding.ASCII.GetBytes(request.Input));
+            StringBuilder buffer = new StringBuilder();
+            for (int i = 0; i < hash.Length; i++)
+            {
+                buffer.Append(hash[i].ToString("X2"));
+            }
+            return buffer.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"MD5 Exception on {request.Input}");
             return "";
         }
     }
