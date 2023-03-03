@@ -46,11 +46,20 @@ public class CrawlerController : ControllerBase
             ListCrawlerResponse firstCall = await GetData(request);
             items.AddRange(firstCall.Data.FirstOrDefault().Value.List);
 
-            while (firstCall.Data.FirstOrDefault().Value.TotalCount >= request.SkipTo)
+            try
             {
-                ListCrawlerResponse nextCall = await GetData(request);
-                items.AddRange(nextCall.Data.FirstOrDefault().Value.List);
+                while (firstCall.Data.FirstOrDefault().Value.TotalCount >= request.SkipTo)
+                {
+                    ListCrawlerResponse nextCall = await GetData(request);
+                    items.AddRange(nextCall.Data.FirstOrDefault().Value.List);
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetData Exception");
+            }
+
+            _logger.LogInformation($"Run up to {request.SkipTo}");
 
             var a = CreateWorkbookAndFillData(items.Select(x => new ExcelRecord
             {
@@ -89,27 +98,34 @@ public class CrawlerController : ControllerBase
     private async Task<ListCrawlerResponse> GetData(ListCrawlerRequest request)
     {
         _logger.LogInformation($"GetData from {request.SkipTo} to {request.SkipTo + request.ItemsPerPage}");
-        var loginRequest = new RestRequest(request.Endpoint, Method.Post);
+        var restRequest = new RestRequest(request.Endpoint, Method.Post);
 
         foreach (var header in request.Headers)
         {
-            loginRequest.AddHeader(header.Key, header.Value);
+            restRequest.AddHeader(header.Key, header.Value);
         }
-        loginRequest.AddBody(JsonConvert.DeserializeObject<RawBodyObj>(request.Body.Replace("[[perPage]]", request.ItemsPerPage.ToString()).Replace("[[skip]]", request.SkipTo.ToString())));
+        restRequest.AddJsonBody(JsonConvert.DeserializeObject<RawBodyObj>(request.Body.Replace("[[perPage]]", request.ItemsPerPage.ToString()).Replace("[[skip]]", request.SkipTo.ToString())));
 
-        var ret = await ExecuteAsync<ListCrawlerResponse>(request.Endpoint, loginRequest);
+        var ret = await ExecuteAsync<ListCrawlerResponse>(request.Endpoint, restRequest, request.Cookies);
 
         request.SkipTo += request.ItemsPerPage;
         return ret;
-        //var b = a?.Data?.FirstOrDefault().Value?.List;
     }
 
-    private async Task<T?> ExecuteAsync<T>(string endpoint, RestRequest request)
+    private async Task<T?> ExecuteAsync<T>(string endpoint, RestRequest request, CookieAbc[] cookies)
     {
         _logger.LogInformation($"ExecuteAsync to {endpoint}");
         try
         {
             var client = new RestClient(endpoint);
+
+            Uri uri = new Uri(endpoint);
+
+            foreach (var coookie in cookies)
+            {
+                client.AddCookie(coookie.Key, coookie.Value, "/", uri.Host);
+            }
+
             RestResponse response = await client.ExecuteAsync(request);
             return HandleResponse<T>(response, endpoint);
         }

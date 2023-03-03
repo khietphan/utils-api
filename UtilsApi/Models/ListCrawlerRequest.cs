@@ -7,6 +7,7 @@ namespace UtilsApi.Models
     {
         public string Endpoint { get; set; }
         public Dictionary<string, string> Headers { get; set; }
+        public CookieAbc[] Cookies { get; set; }
 
         public string Body { get; set; }
 
@@ -59,6 +60,12 @@ namespace UtilsApi.Models
         public string AgentCode { get; set; }
         public string SaleUserId { get; set; }
         public string AgentCodeName { get; set; }
+    }
+
+    public class CookieAbc
+    {
+        public string Key { get; set; }
+        public string Value { get; set; }
     }
 
     public class AssociatedUserField
